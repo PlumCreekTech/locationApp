@@ -4,7 +4,6 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.location.LocationClient;
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
@@ -12,11 +11,12 @@ import android.app.DialogFragment;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentManager;
 import android.util.Log;
 import android.view.Menu;
+import android.widget.TextView;
 import android.widget.Toast;
 
 @SuppressLint("NewApi")
@@ -67,9 +67,11 @@ public class MainActivity extends FragmentActivity implements GooglePlayServices
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		
-		//Create new location client
-		locClient = new LocationClient(this, this, this);
+
+		if (servicesConnected()) {
+			// Create new location client
+			locClient = new LocationClient(this, this, this);
+		}
 	}
 
 	protected void onStart(){
@@ -175,7 +177,12 @@ public class MainActivity extends FragmentActivity implements GooglePlayServices
 		//Display connection status
 		Toast.makeText(this, "Connected! Go you!", Toast.LENGTH_SHORT).show();
 		//get location
-		currentLoc = locClient.getLastLocation();
+		LocationManager mrmanager = (LocationManager) getSystemService(LOCATION_SERVICE);
+		currentLoc = mrmanager.getLastKnownLocation("gps");
+		//currentLoc = locClient.getLastLocation();
+		String locText = "Latitude "+currentLoc.getLatitude()+"::: Longitude "+currentLoc.getLongitude();
+//		TextView viewLocation = (TextView) findViewById(R.id.locationtext);
+//		viewLocation.setText(locText);
 	}
 
 	/**

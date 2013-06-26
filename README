@@ -1,0 +1,15 @@
+READ ME FOR LOCATIONAPP BY NORA AND DEVIN
+
+things to make sure it runs:
+
+must have installed the android SDK (for eclipse)
+must have google play services SDK
+must have google API APK
+must link to google play services library
+on emulator, you need wifi enabled, location permission granted
+	(go to google maps and cooperate with the prompts)
+emulator must have Google APIs as target name
+must use DDMS to give device locations
+should make build target Google APIs
+
+please let us know if we missed anything!

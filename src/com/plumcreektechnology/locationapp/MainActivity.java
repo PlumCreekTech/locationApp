@@ -4,6 +4,8 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.location.LocationClient;
+import com.google.android.gms.location.LocationRequest;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
@@ -11,19 +13,29 @@ import android.app.DialogFragment;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.Menu;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 @SuppressLint("NewApi")
-public class MainActivity extends FragmentActivity implements GooglePlayServicesClient.ConnectionCallbacks, GooglePlayServicesClient.OnConnectionFailedListener {
+public class MainActivity extends FragmentActivity implements
+		GooglePlayServicesClient.ConnectionCallbacks,
+		GooglePlayServicesClient.OnConnectionFailedListener,
+		com.google.android.gms.location.LocationListener {
 	private final static int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
 	private LocationClient locClient;
 	private Location currentLoc;
+	private LocationRequest locRequest;
+	
+	private static final long UPDATE_INTERVAL_MS = 5000;
+	private static final long FASTEST_INTERVAL_MS = 2000;
+	
+	private TextView address;
+	private ProgressBar progress;
 
 	 /**
 	  * creates dialog fragment to display our error message.
@@ -67,11 +79,20 @@ public class MainActivity extends FragmentActivity implements GooglePlayServices
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		
+		address = (TextView) findViewById(R.id.location_adddress);
+		progress = (ProgressBar) findViewById(R.id.address_progress);
 
 		if (servicesConnected()) {
 			// Create new location client
 			locClient = new LocationClient(this, this, this);
 		}
+		
+		// do all of the right things to make a location request for repeated updates
+		locRequest = LocationRequest.create();
+		locRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+		locRequest.setInterval(UPDATE_INTERVAL_MS);
+		locRequest.setFastestInterval(FASTEST_INTERVAL_MS);
 	}
 
 	protected void onStart(){
@@ -180,9 +201,12 @@ public class MainActivity extends FragmentActivity implements GooglePlayServices
 //		LocationManager mrmanager = (LocationManager) getSystemService(LOCATION_SERVICE);
 //		currentLoc = mrmanager.getLastKnownLocation("gps");
 		currentLoc = locClient.getLastLocation();
-		String locText = "Latitude "+currentLoc.getLatitude()+" ::: Longitude "+currentLoc.getLongitude();
+		String message = "First Location: "
+				+ Double.toString(currentLoc.getLatitude()) + ","
+				+ Double.toString(currentLoc.getLongitude());
 		TextView viewLocation = (TextView) findViewById(R.id.locationtext);
-		viewLocation.setText(locText);
+		viewLocation.setText(message);
+		locClient.requestLocationUpdates(locRequest, this);
 	}
 
 	/**
@@ -192,5 +216,14 @@ public class MainActivity extends FragmentActivity implements GooglePlayServices
 	public void onDisconnected() {
 		// Display sad connection status
 		Toast.makeText(this, "Disconnected. Don't beat yourself up about it.", Toast.LENGTH_SHORT).show();	
+	}
+
+	@Override
+	public void onLocationChanged(Location location) {
+		currentLoc = location;
+		String message = "Updated Location: "
+				+ Double.toString(currentLoc.getLatitude()) + ","
+				+ Double.toString(currentLoc.getLongitude());
+		Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
 	}
 }

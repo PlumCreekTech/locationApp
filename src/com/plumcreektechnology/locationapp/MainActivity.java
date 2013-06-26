@@ -1,5 +1,9 @@
 package com.plumcreektechnology.locationapp;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
+
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.common.GooglePlayServicesUtil;
@@ -10,13 +14,19 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.DialogFragment;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
+import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.Menu;
+import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,6 +36,7 @@ public class MainActivity extends FragmentActivity implements
 		GooglePlayServicesClient.ConnectionCallbacks,
 		GooglePlayServicesClient.OnConnectionFailedListener,
 		com.google.android.gms.location.LocationListener {
+	
 	private final static int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
 	private LocationClient locClient;
 	private Location currentLoc;
@@ -34,7 +45,7 @@ public class MainActivity extends FragmentActivity implements
 	private static final long UPDATE_INTERVAL_MS = 5000;
 	private static final long FASTEST_INTERVAL_MS = 2000;
 	
-	private TextView address;
+	private TextView addressText;
 	private ProgressBar progress;
 
 	 /**
@@ -75,12 +86,77 @@ public class MainActivity extends FragmentActivity implements
 		}
 	}
 	
+	/**
+	 * a class to handle address finding in the background
+	 * extends AsyncTask<Locaiton, Void, String>
+	 * @author devinfrenze
+	 *
+	 */
+	private class GetAddressTask extends AsyncTask<Location, Void, String> {
+
+		Context context;
+		
+		/**
+		 * construct an instance of GetAddressTask
+		 * @param context
+		 */
+		public GetAddressTask(Context context) {
+			super();
+			this.context = context;
+		}
+		
+		/**
+		 * finds address in background and returns as string
+		 * takes any number of locations as arguments but 
+		 * our implementation handles only the first
+		 */
+		@Override
+		protected String doInBackground(Location... locArg) {
+			Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+			Location loc = locArg[0];
+			List<Address> addresses = null;
+			try {
+				addresses = geocoder.getFromLocation(loc.getLatitude(),loc.getLongitude(), 1);
+			} catch (IOException e1) {
+				Log.e("LocationAddress", "IO Exception in getFromLocaiton()");
+				e1.printStackTrace();
+				return ("IO Exception trying to get address");
+			} catch (IllegalArgumentException e2) {
+				String errorString = "Illegal arguments "
+						+ Double.toString(loc.getLatitude()) + ", "
+						+ Double.toString(loc.getLongitude())
+						+ " passed to address service";
+				Log.e("LocationSampleActivity", errorString);
+				e2.printStackTrace();
+				return errorString;
+			}
+			// if there is an address
+			if(addresses != null && addresses.size()>0) {
+				Address add = addresses.get(0);
+				String addText = String.format("%s, %s, %s",
+						add.getMaxAddressLineIndex() > 0 ? add.getAddressLine(0) : "",
+								add.getLocality(),
+								add.getCountryName());
+				return addText;
+			} else return "No address found";
+		}
+		
+		/**
+		 * displays the result of an address lookup when called
+		 * hides the progress indicator
+		 */
+		protected void onPostExecute(String address) {
+			progress.setVisibility(View.GONE);
+			addressText.setText(address);
+		}
+	}
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		
-		address = (TextView) findViewById(R.id.location_adddress);
+		addressText = (TextView) findViewById(R.id.location_adddress);
 		progress = (ProgressBar) findViewById(R.id.address_progress);
 
 		if (servicesConnected()) {
@@ -198,8 +274,6 @@ public class MainActivity extends FragmentActivity implements
 		//Display connection status
 		Toast.makeText(this, "Connected! Go you!", Toast.LENGTH_SHORT).show();
 		//get location
-//		LocationManager mrmanager = (LocationManager) getSystemService(LOCATION_SERVICE);
-//		currentLoc = mrmanager.getLastKnownLocation("gps");
 		currentLoc = locClient.getLastLocation();
 		String message = "First Location: "
 				+ Double.toString(currentLoc.getLatitude()) + ","
@@ -218,12 +292,21 @@ public class MainActivity extends FragmentActivity implements
 		Toast.makeText(this, "Disconnected. Don't beat yourself up about it.", Toast.LENGTH_SHORT).show();	
 	}
 
+	/**
+	 * every time the location changes make a toast
+	 * and update the address in the textview
+	 */
 	@Override
 	public void onLocationChanged(Location location) {
 		currentLoc = location;
 		String message = "Updated Location: "
 				+ Double.toString(currentLoc.getLatitude()) + ","
 				+ Double.toString(currentLoc.getLongitude());
-		Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+		Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+		// check if Geocoder services is available
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD && Geocoder.isPresent()) {
+			progress.setVisibility(View.VISIBLE);
+			(new GetAddressTask(this)).execute(currentLoc);
+		} else Toast.makeText(this, "geocoder unavailable", Toast.LENGTH_SHORT);
 	}
 }

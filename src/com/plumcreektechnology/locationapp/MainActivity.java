@@ -177,12 +177,12 @@ public class MainActivity extends FragmentActivity implements GooglePlayServices
 		//Display connection status
 		Toast.makeText(this, "Connected! Go you!", Toast.LENGTH_SHORT).show();
 		//get location
-		LocationManager mrmanager = (LocationManager) getSystemService(LOCATION_SERVICE);
-		currentLoc = mrmanager.getLastKnownLocation("gps");
-		//currentLoc = locClient.getLastLocation();
-		String locText = "Latitude "+currentLoc.getLatitude()+"::: Longitude "+currentLoc.getLongitude();
-//		TextView viewLocation = (TextView) findViewById(R.id.locationtext);
-//		viewLocation.setText(locText);
+//		LocationManager mrmanager = (LocationManager) getSystemService(LOCATION_SERVICE);
+//		currentLoc = mrmanager.getLastKnownLocation("gps");
+		currentLoc = locClient.getLastLocation();
+		String locText = "Latitude "+currentLoc.getLatitude()+" ::: Longitude "+currentLoc.getLongitude();
+		TextView viewLocation = (TextView) findViewById(R.id.locationtext);
+		viewLocation.setText(locText);
 	}
 
 	/**
